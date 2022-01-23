@@ -49,3 +49,6 @@
     - "prereq/default.yml"
   when:
     - raspberry_pi|default(false)
+
+- name: Configure cgroup
+  command: sed -i '/cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/!s/$/\ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' /boot/cmdline.txt
