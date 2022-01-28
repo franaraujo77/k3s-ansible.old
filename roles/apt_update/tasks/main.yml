@@ -1,0 +1,10 @@
+---
+- name: Install package to maintain clock updated
+  apt:
+    name: htpdate
+    state: present
+- name: Update all packages to their latest version
+  apt:
+    name: "*"
+    state: latest
+    update_cache: yes
