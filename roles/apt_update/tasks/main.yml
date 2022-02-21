@@ -3,6 +3,14 @@
   apt:
     name: htpdate
     state: present
+- name: Install package for open container
+  apt:
+    name: runc
+    state: present
+- name: Install package for cgroup
+  apt:
+    name: cgroup-tools cgroup-mount
+    state: present
 - name: Update all packages to their latest version
   apt:
     name: "*"
