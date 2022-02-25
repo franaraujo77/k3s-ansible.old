@@ -42,6 +42,7 @@ data:
                     - state_service
                 - module: kubernetes
                   metricsets:
+                    - volume
                     - apiserver
                   hosts: ["https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"]
                   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
