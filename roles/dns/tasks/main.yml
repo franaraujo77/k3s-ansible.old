@@ -1,0 +1,23 @@
+---
+- name: Install package for dns
+  apt:
+    name: dnsmasq
+    state: present
+- name: Copy dnsmasq configuration
+  ansible.builtin.copy:
+    src: files/dnsmasq.conf
+    dest: /etc/dnsmasq.conf
+- name: Restart service dnsmasq
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: dnsmasq
+- name: Install package to maintain system secure
+  apt:
+    name: unattended-upgrades
+    state: present
+- name: Update all packages to their latest version
+  apt:
+    name: "*"
+    state: latest
+    update_cache: yes
