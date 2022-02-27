@@ -42,10 +42,16 @@ data:
                     - state_service
                 - module: kubernetes
                   metricsets:
+                    - node
+                    - system
+                    - pod
                     - volume
+                    - event
+                    - container
                     - apiserver
                   hosts: ["https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"]
                   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                  ssl.verification_mode: none
                   ssl.certificate_authorities:
                     - /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                   period: 30s
@@ -267,13 +273,19 @@ metadata:
   labels:
     k8s-app: metricbeat
 rules:
-- apiGroups: [""]
+- apiGroups: 
+  - extensions
+  - apps
+  - ""
   resources:
   - nodes
+  - nodes/stats
+  - replicasets
   - namespaces
   - events
   - pods
   - services
+  - deployments
   verbs: ["get", "list", "watch"]
 # Enable this rule only if planing to use Kubernetes keystore
 #- apiGroups: [""]
