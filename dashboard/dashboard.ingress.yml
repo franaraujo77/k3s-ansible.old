@@ -5,7 +5,7 @@ metadata:
   namespace: kubernetes-dashboard
 spec:
   rules:
-  - host: dashboard.k3s.com
+  - host: management.k3s.com
     http:
       paths:
       - path: /
