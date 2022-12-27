@@ -3,19 +3,27 @@
   apt:
     name: dnsmasq
     state: present
+  when:
+    - raspberry_pi|default(false)
 - name: Copy dnsmasq configuration
   ansible.builtin.copy:
     src: files/dnsmasq.conf
     dest: /etc/dnsmasq.conf
+  when:
+    - raspberry_pi|default(false)
 - name: Restart service dnsmasq
   ansible.builtin.systemd:
     state: restarted
     daemon_reload: yes
     name: dnsmasq
+  when:
+    - raspberry_pi|default(false)
 - name: Install package to maintain system secure
   apt:
     name: unattended-upgrades
     state: present
+  when:
+    - raspberry_pi|default(false)
 - name: Update all packages to their latest version
   apt:
     name: "*"
