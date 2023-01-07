@@ -5,7 +5,7 @@ metadata:
   namespace: kubernetes-dashboard
 spec:
   rules:
-  - host: management.k3s.com
+  - host: management.k3s.karva.io
     http:
       paths:
       - path: /
