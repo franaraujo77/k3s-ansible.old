@@ -1,0 +1,25 @@
+apiVersion: beat.k8s.elastic.co/v1beta1
+kind: Beat
+metadata:
+  name: heartbeat
+  namespace: logs-management
+spec:
+  type: heartbeat
+  version: 8.5.0
+  elasticsearchRef:
+    name: elasticsearch-logging
+    namespace: logs-management
+  config:
+    heartbeat.monitors:
+    - type: tcp
+      schedule: '@every 5s'
+      hosts: ["elasticsearch-logging-es-http.default.svc:9200"]
+    - type: tcp
+      schedule: '@every 5s'
+      hosts: ["kibana-logging-kb-http.default.svc:5601"]
+  deployment:
+    replicas: 1
+    podTemplate:
+      spec:
+        securityContext:
+          runAsUser: 0

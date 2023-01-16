@@ -1,0 +1,224 @@
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata:
+  name: fleet-server-logging
+  namespace: logs-management
+spec:
+  version: 8.5.0
+  kibanaRef:
+    name: kibana-logging
+  elasticsearchRefs:
+  - name: elasticsearch-logging
+  mode: fleet
+  fleetServerEnabled: true
+  deployment:
+    replicas: 3
+    podTemplate:
+      spec:
+        serviceAccountName: elastic-fleetserver-logging
+        automountServiceAccountToken: true
+        securityContext:
+          runAsUser: 0
+---
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata:
+  name: elastic-agent-logging
+  namespace: logs-management
+spec:
+  version: 8.5.0
+  kibanaRef:
+    name: kibana-logging
+  fleetServerRef:
+    name: fleet-server-logging
+  mode: fleet
+  daemonSet:
+    podTemplate:
+      spec:
+        serviceAccountName: elastic-agent-logging
+        automountServiceAccountToken: true
+        securityContext:
+          runAsUser: 0
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana-logging
+  namespace: logs-management
+  labels:
+    k8s-app: kibana-logging
+spec:
+  version: 8.5.0
+  count: 1
+  elasticsearchRef:
+    name: elasticsearch-logging
+  http:
+    service:
+      spec:
+        type: LoadBalancer # default is ClusterIP
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - dns: logs.k3s.karva.io
+  config:
+    #server.publicBaseUrl: logs.k3s.karva.io
+    csp.strict: false
+    xpack.fleet.agents.elasticsearch.hosts: ["https://elasticsearch-logging-es-http.logs-management.svc:9200"]
+    xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server-logging-agent-http.logs-management.svc:8220"]
+    xpack.fleet.packages:
+      - name: system
+        version: latest
+      - name: elastic_agent
+        version: latest
+      - name: fleet_server
+        version: latest
+    xpack.fleet.agentPolicies:
+      - name: Fleet Server on ECK policy
+        id: eck-fleet-server
+        is_default_fleet_server: true
+        namespace: default
+        monitoring_enabled:
+          - logs
+          - metrics
+        unenroll_timeout: 900
+        package_policies:
+        - name: fleet_server-1
+          id: fleet_server-1
+          package:
+            name: fleet_server
+      - name: Elastic Agent on ECK policy
+        id: eck-agent
+        namespace: default
+        monitoring_enabled:
+          - logs
+          - metrics
+        unenroll_timeout: 900
+        is_default: true
+        package_policies:
+          - name: system-1
+            id: system-1
+            package:
+              name: system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: elastic-agent-logging
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources:
+  - namespaces
+  - pods
+  - nodes
+  - events
+  - services
+  - configmaps
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["extensions"]
+  resources:
+    - replicasets
+  verbs: 
+  - "get"
+  - "list"
+  - "watch"
+- apiGroups:
+  - "apps"
+  resources:
+  - statefulsets
+  - deployments
+  - replicasets
+  verbs:
+  - "get"
+  - "list"
+  - "watch"
+- apiGroups:
+  - ""
+  resources:
+  - nodes/stats
+  verbs:
+  - get
+- apiGroups:
+  - "batch"
+  resources:
+  - jobs
+  verbs:
+  - "get"
+  - "list"
+  - "watch"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: elastic-agent-logging
+  namespace: logs-management
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: elastic-agent-logging
+subjects:
+- kind: ServiceAccount
+  name: elastic-agent-logging
+  namespace: logs-management
+roleRef:
+  kind: ClusterRole
+  name: elastic-agent-logging
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: elastic-fleetserver-logging
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources:
+  - namespaces
+  - pods
+  - nodes
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+  - list
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: elastic-fleetserver-logging
+  namespace: logs-management
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: elastic-fleetserver-logging
+subjects:
+- kind: ServiceAccount
+  name: elastic-fleetserver-logging
+  namespace: logs-management
+roleRef:
+  kind: ClusterRole
+  name: elastic-fleetserver-logging
+  apiGroup: rbac.authorization.k8s.io
