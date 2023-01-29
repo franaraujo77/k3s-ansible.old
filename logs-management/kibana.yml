@@ -60,8 +60,9 @@ spec:
       selfSignedCertificate:
         subjectAltNames:
         - dns: logs.k3s.karva.io
+
   config:
-    #server.publicBaseUrl: logs.k3s.karva.io
+    server.publicBaseUrl: https://logs.k3s.karva.io
     csp.strict: false
     xpack.fleet.agents.elasticsearch.hosts: ["https://elasticsearch-logging-es-http.logs-management.svc:9200"]
     xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server-logging-agent-http.logs-management.svc:8220"]
