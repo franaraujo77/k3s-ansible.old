@@ -1,0 +1,52 @@
+---
+
+- hosts: load_balancer
+  become: yes
+  roles:
+    - role: nginx 
+  vars:
+    nginx_sites:
+      - name: kibana
+        url: logs.k3s.karva.io
+        nginx_backend_servers:
+          - address: 192.168.15.82
+            port: 5601
+          - address: 192.168.15.83
+            port: 5601
+          - address: 192.168.15.84
+            port: 5601
+          - address: 192.168.15.85
+            port: 5601
+      - name: rancher
+        url: rancher.k3s.karva.io
+        nginx_backend_servers:
+          - address: 192.168.15.82
+            port: 443
+          - address: 192.168.15.83
+            port: 443
+          - address: 192.168.15.84
+            port: 443
+          - address: 192.168.15.85
+            port: 443
+      - name: loghorn
+        url: storage.k3s.karva.io
+        nginx_backend_servers:
+          - address: 192.168.15.82
+            port: 443
+          - address: 192.168.15.83
+            port: 443
+          - address: 192.168.15.84
+            port: 443
+          - address: 192.168.15.85
+            port: 443
+      - name: heimdall
+        url: heimdall.k3s.karva.io
+        nginx_backend_servers:
+          - address: 192.168.15.82
+            port: 443
+          - address: 192.168.15.83
+            port: 443
+          - address: 192.168.15.84
+            port: 443
+          - address: 192.168.15.85
+            port: 443
