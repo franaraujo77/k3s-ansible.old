@@ -1,0 +1,145 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: heimdall
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: heimdall-storage-class
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "2880" # 48 hours in minutes
+  replicaAutoBalance: "least-effort"
+  fsType: "ext4"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: heimdall-volv-pvc
+  namespace: heimdall
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: heimdall-storage-class
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: heimdall-certificate
+  namespace: heimdall
+spec:
+  secretName: heimdall-tls
+  dnsNames:
+    - heimdall.k3s.karva.io
+  issuerRef:
+    name: selfsigned-cluster-issuer
+    kind: ClusterIssuer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heimdall        # < name of the deployment
+  namespace: heimdall   # < namespace where place the deployment and pods
+  labels:
+    app: heimdall       # < label for tagging and reference
+spec:
+  replicas: 1           # < number of pods to deploy
+  selector:
+    matchLabels:
+      app: heimdall
+  strategy:
+    rollingUpdate:
+      maxSurge: 0       # < The number of pods that can be created above the desired amount of pods during an update
+      maxUnavailable: 1 # < The number of pods that can be unavailable during the update process
+    type: RollingUpdate # < New pods are added gradually, and old pods are terminated gradually
+  template:
+    metadata:
+      labels:
+        app: heimdall
+    spec:
+      volumes:
+      - name: nfs-heimdall  # < linkname of the volume for the pvc
+        persistentVolumeClaim:
+          claimName: heimdall-volv-pvc # < pvc name we created in the previous yaml
+      - name: heimdall-ssl
+        secret:
+          secretName: heimdall-tls # < the name ssl certificate, will be created in the ingress yaml
+      containers:
+      - image: ghcr.io/linuxserver/heimdall # < the name of the docker image we will use
+        name: heimdall                      # < name of container
+        imagePullPolicy: Always             # < always use the latest image when creating container/pod
+        env:                                # < the environment variables required (see container documentation)
+        - name: PGID
+          value: "100" # < group "user"
+        - name: PUID
+          value: "1041" # < user "docker"
+        - name: TZ
+          value: America/Sao_Paulo
+        ports:     
+         - containerPort: 443
+           name: https-443
+           protocol: TCP 
+         - containerPort: 80
+           name: http-80
+           protocol: TCP
+        volumeMounts:                       # < the volume mount in the container. Look at the relation volumelabel->pvc->pv
+         - mountPath: /config               # < mount location in the container
+           name: nfs-heimdall               # < volumelabel configured earlier in the yaml file
+           subPath: config                  # < subfolder in the nfs share to be mounted
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: heimdall-service    # < name of the service
+  namespace: heimdall       # < namespace where place the deployment and pods
+spec:
+  selector:
+    app: heimdall           # < reference to the deployment (connects with this deployment)
+  ports:
+    - name: https-443
+      protocol: TCP
+      port: 443
+    - name: http-80
+      protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: heimdall-ingress   # < name of ingress entry
+  namespace: heimdall      # < namespace where place the deployment and pods
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-cluster-issuer" # < use letsencrypt-prod application in kubernetes to generate ssl certificate
+    cert-manager.io/issuer-kind: ClusterIssuer
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: heimdall.k3s.karva.io  # < hostname to access the heimdall
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: heimdall-service # < connect the ingress entry to service created earlier
+            port: 
+              number: 443
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: heimdall-service # < connect the ingress entry to service created earlier
+            port: 
+              number: 80
+  tls: # < placing a host in the TLS config will indicate a cert should be created
+  - hosts:
+    - heimdall.k3s.karva.io  # < hostname to access the heimdall
+    secretName: heimdall-tls # < cert-manager will store the created certificate in this secret.
+---
