@@ -1,0 +1,2 @@
+roles/nginx/files/dhparam.pem
+roles/nginx/files/self-signed.key
