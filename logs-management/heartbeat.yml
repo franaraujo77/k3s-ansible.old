@@ -5,7 +5,7 @@ metadata:
   namespace: logs-management
 spec:
   type: heartbeat
-  version: 8.5.0
+  version: 8.6.1
   elasticsearchRef:
     name: elasticsearch-logging
     namespace: logs-management
@@ -13,10 +13,10 @@ spec:
     heartbeat.monitors:
     - type: tcp
       schedule: '@every 5s'
-      hosts: ["elasticsearch-logging-es-http.default.svc:9200"]
+      hosts: ["elasticsearch-logging-es-http.logs-management.svc:9200"]
     - type: tcp
       schedule: '@every 5s'
-      hosts: ["kibana-logging-kb-http.default.svc:5601"]
+      hosts: ["kibana-logging-kb-http.logs-management:5601"]
   deployment:
     replicas: 1
     podTemplate:

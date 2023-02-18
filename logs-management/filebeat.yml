@@ -5,7 +5,7 @@ metadata:
   namespace: logs-management
 spec:
   type: filebeat
-  version: 8.5.0
+  version: 8.6.1
   elasticsearchRef:
     name: elasticsearch-logging
     namespace: default

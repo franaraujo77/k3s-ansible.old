@@ -4,7 +4,7 @@ metadata:
   name: fleet-server-logging
   namespace: logs-management
 spec:
-  version: 8.5.0
+  version: 8.6.1
   kibanaRef:
     name: kibana-logging
   elasticsearchRefs:
@@ -12,7 +12,7 @@ spec:
   mode: fleet
   fleetServerEnabled: true
   deployment:
-    replicas: 3
+    replicas: 1
     podTemplate:
       spec:
         serviceAccountName: elastic-fleetserver-logging
@@ -26,7 +26,7 @@ metadata:
   name: elastic-agent-logging
   namespace: logs-management
 spec:
-  version: 8.5.0
+  version: 8.6.1
   kibanaRef:
     name: kibana-logging
   fleetServerRef:
@@ -36,6 +36,8 @@ spec:
     podTemplate:
       spec:
         serviceAccountName: elastic-agent-logging
+        hostNetwork: true
+        dnsPolicy: ClusterFirstWithHostNet
         automountServiceAccountToken: true
         securityContext:
           runAsUser: 0
@@ -48,7 +50,7 @@ metadata:
   labels:
     k8s-app: kibana-logging
 spec:
-  version: 8.5.0
+  version: 8.6.1
   count: 1
   elasticsearchRef:
     name: elasticsearch-logging
@@ -64,14 +66,16 @@ spec:
   config:
     server.publicBaseUrl: https://logs.k3s.karva.io
     csp.strict: false
-    xpack.fleet.agents.elasticsearch.hosts: ["https://elasticsearch-logging-es-http.logs-management.svc:9200"]
-    xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server-logging-agent-http.logs-management.svc:8220"]
+    xpack.fleet.agents.elasticsearch.hosts: ["https://elasticsearch-logging-es-http.logs-management:9200"]
+    xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server-logging-agent-http.logs-management:8220"]
     xpack.fleet.packages:
       - name: system
         version: latest
       - name: elastic_agent
         version: latest
       - name: fleet_server
+        version: latest
+      - name: kubernetes
         version: latest
     xpack.fleet.agentPolicies:
       - name: Fleet Server on ECK policy
@@ -96,10 +100,12 @@ spec:
         unenroll_timeout: 900
         is_default: true
         package_policies:
-          - name: system-1
-            id: system-1
-            package:
-              name: system
+        - package:
+            name: system
+          name: system-1
+        - package:
+            name: kubernetes
+          name: kubernetes-1
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

@@ -1,26 +1,23 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logs-management
+---
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: elastic-storage-class
-provisioner: driver.longhorn.io
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   numberOfReplicas: "2"
   staleReplicaTimeout: "2880" # 48 hours in minutes
   replicaAutoBalance: "least-effort"
   fsType: "ext4"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: elastic-volv-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: elastic-storage-class
-  resources:
-    requests:
-      storage: 100Gi
 ---
 # Elasticsearch deployment itself
 apiVersion: elasticsearch.k8s.elastic.co/v1
@@ -31,7 +28,7 @@ metadata:
   labels:
     k8s-app: elasticsearch-logging
 spec:
-  version: 8.5.0
+  version: 8.6.1
   volumeClaimDeletePolicy: DeleteOnScaledownOnly
   transport:
     service:
@@ -39,7 +36,9 @@ spec:
         type: LoadBalancer
   nodeSets:
   - name: default
-    count: 2
+    count: 1
+    config:
+      node.store.allow_mmap: false
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data # Do not change this name unless you set up a volume mount for the data path.
@@ -80,6 +79,18 @@ rules:
   - get
   - create
   - update
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "update"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "update", "patch"]
 ---
 apiVersion: v1
 kind: ServiceAccount

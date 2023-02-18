@@ -9,9 +9,7 @@ kubectl delete -f logs-management/elasticsearch.yml \
                 -f logs-management/heartbeat.yml  \
                 -f logs-management/filebeat.yml 
 
-helm uninstall elastic-operator -n logs-management
-
-helm repo remove elastic
-helm repo update
+kubectl delete -f https://download.elastic.co/downloads/eck/2.6.1/operator.yaml
+kubectl delete -f https://download.elastic.co/downloads/eck/2.6.1/crds.yaml
 
 echo "Removed ELK logs management"
