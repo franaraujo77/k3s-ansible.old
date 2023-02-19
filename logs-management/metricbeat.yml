@@ -8,7 +8,7 @@ spec:
   version: 8.6.1
   elasticsearchRef:
     name: elasticsearch-logging
-    namespace: default
+    namespace: logs-management
   kibanaRef:
     name: kibana-logging
     namespace: logs-management
@@ -158,7 +158,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: metricbeat
-  namespace: default
+  namespace: logs-management
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -168,7 +168,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: metricbeat
-  namespace: default
+  namespace: logs-management
 roleRef:
   kind: ClusterRole
   name: metricbeat
