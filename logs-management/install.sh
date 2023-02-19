@@ -13,3 +13,5 @@ kubectl apply -f logs-management/elasticsearch.yml \
                 -f logs-management/filebeat.yml 
 
 echo "Finished ELK logs management setup"
+
+echo "To log in, execute kubectl -n logs-management get secret elasticsearch-logging-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode; echo"
