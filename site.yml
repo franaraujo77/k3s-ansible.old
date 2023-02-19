@@ -34,8 +34,6 @@
             port: 5601
           - address: 192.168.15.86
             port: 5601
-          - address: 192.168.15.85
-            port: 5601
       - name: rancher
         url: rancher.k3s.karva.io
         nginx_backend_servers:
@@ -45,19 +43,6 @@
             port: 443
           - address: 192.168.15.86
             port: 443
-          - address: 192.168.15.85
-            port: 443
-      - name: loghorn
-        url: storage.k3s.karva.io
-        nginx_backend_servers:
-          - address: 192.168.15.88
-            port: 443
-          - address: 192.168.15.87
-            port: 443
-          - address: 192.168.15.86
-            port: 443
-          - address: 192.168.15.85
-            port: 443
       - name: heimdall
         url: heimdall.k3s.karva.io
         nginx_backend_servers:
@@ -66,6 +51,4 @@
           - address: 192.168.15.87
             port: 443
           - address: 192.168.15.86
-            port: 443
-          - address: 192.168.15.85
             port: 443
