@@ -8,8 +8,11 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: heimdall-storage-class
-provisioner: driver.longhorn.io
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   numberOfReplicas: "2"
   staleReplicaTimeout: "2880" # 48 hours in minutes
@@ -23,7 +26,7 @@ metadata:
   namespace: heimdall
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   storageClassName: heimdall-storage-class
   resources:
     requests:
