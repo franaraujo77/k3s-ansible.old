@@ -8,31 +8,48 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: pihole-storage-class
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: driver.longhorn.io
 allowVolumeExpansion: true
+# volumeBindingMode: WaitForFirstConsumer
 parameters:
   numberOfReplicas: "2"
   staleReplicaTimeout: "2880" # 48 hours in minutes
   replicaAutoBalance: "least-effort"
+  fromBackup: ""
   fsType: "ext4"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pihole-volv-pvc
+  name: pihole-local-etc-claim
   namespace: pihole
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   storageClassName: pihole-storage-class
   resources:
     requests:
       storage: 1Gi
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pihole-local-dnsmasq-claim
+  namespace: pihole
+spec:
+  storageClassName: pihole-storage-class
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: pihole-certificate
+  name: pihole-tls
   namespace: pihole
 spec:
   secretName: pihole-tls
@@ -42,59 +59,97 @@ spec:
     name: selfsigned-cluster-issuer
     kind: ClusterIssuer
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: pihole
   namespace: pihole
+  labels:
+    app: pihole
 spec:
-  hostNetwork: true
-  dnsPolicy: "None"
-  dnsConfig:
-    nameservers:
-      # upstream DNS used by pihole.
-      - 8.8.8.8
-      - 8.8.4.4
-  containers:
-    - name: pihole
-      # https://hub.docker.com/r/pihole/pihole/tags
-      image: pihole/pihole:latest
-      imagePullPolicy: IfNotPresent
-      env:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pihole
+  template:
+    metadata:
+      labels:
+        app: pihole
+        name: pihole
+    spec:
+      containers:
+      - name: pihole
+        image: pihole/pihole:latest
+        imagePullPolicy: Always
+        env:
         - name: TZ
           value: "America/Sao_Paulo"
         - name: WEBPASSWORD
-          value: "EFIhNlLa"
-      securityContext:
-        privileged: true
-      ports:
-        - containerPort: 53
-          protocol: TCP
-        - containerPort: 53
-          protocol: UDP
-        - containerPort: 67
-          protocol: UDP
-        - containerPort: 443
-          protocol: TCP
-      volumeMounts:
-        - name: etc
-          mountPath: /etc/pihole
-        - name: dnsmasq
-          mountPath: /etc/dnsmasq.d
-      resources:
-        requests:
-          memory: 128Mi
-          cpu: 100m
-        limits:
-          memory: 2Gi
-          cpu: 1
-  volumes:
-    - name: etc
-      hostPath:
-        path: /data/pihole/etc
-        type: Directory
-    - name: dnsmasq
-      hostPath:
-        path: /data/pihole/dnsmasq.d
-        type: Directory
+          value: "secret"
+        volumeMounts:
+        - name: pihole-local-etc-volume
+          mountPath: "/etc/pihole"
+        - name: pihole-local-dnsmasq-volume
+          mountPath: "/etc/dnsmasq.d"
+      volumes:
+      - name: pihole-local-etc-volume
+        persistentVolumeClaim:
+          claimName: pihole-local-etc-claim
+      - name: pihole-local-dnsmasq-volume
+        persistentVolumeClaim:
+          claimName: pihole-local-dnsmasq-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-service
+  namespace: pihole
+spec:
+  selector:
+    app: pihole
+  ports:
+  - port: 80
+    targetPort: 80
+    name: pihole-admin
+  - port: 53
+    targetPort: 53
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: 53
+    protocol: UDP
+    name: dns-udp
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pihole-ingress   # < name of ingress entry
+  namespace: pihole      # < namespace where place the deployment and pods
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-cluster-issuer" # < use letsencrypt-prod application in kubernetes to generate ssl certificate
+    cert-manager.io/issuer-kind: ClusterIssuer
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: pihole.k3s.karva.io  # < hostname to access the pihole
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pihole-service # < connect the ingress entry to service created earlier
+            port: 
+              number: 443
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pihole-service # < connect the ingress entry to service created earlier
+            port: 
+              number: 80
+  tls: # < placing a host in the TLS config will indicate a cert should be created
+  - hosts:
+    - pihole.k3s.karva.io  # < hostname to access the pihole
+    secretName: pihole-tls # < cert-manager will store the created certificate in this secret.
 ---

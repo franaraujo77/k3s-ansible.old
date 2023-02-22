@@ -10,7 +10,14 @@ server {
     return 302 https://$server_name:443;
 }
 server {
-    listen 443 ssl http2;
+    {% if item.nginx_default_port is defined %}
+
+    listen {{ item.nginx_default_port | default('443 ssl http2') }};
+    proxy_pass {{ item.name }}_k3s_servers;
+
+    {% else %}
+
+    listen {{ item.nginx_default_port | default('443 ssl http2') }};
 
     server_name         {{ item.url }};
 
@@ -37,4 +44,6 @@ server {
         add_header Host {{ item.url }};
         proxy_pass https://{{ item.name }}_k3s_servers;
     }
+
+    {% endif %}
 }

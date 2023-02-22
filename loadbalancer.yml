@@ -33,3 +33,23 @@
             port: 443
           - address: 192.168.15.86
             port: 443
+      - name: pihole
+        url: pihole.k3s.karva.io
+        nginx_backend_servers:
+          - address: 192.168.15.88
+            port: 443
+          - address: 192.168.15.87
+            port: 443
+          - address: 192.168.15.86
+            port: 443
+    nginx_stream_sites:
+      - name: piholeDns
+        url: piholedns.k3s.karva.io
+        nginx_default_port: 53 udp
+        nginx_backend_servers:
+          - address: 192.168.15.88
+            port: 53
+          - address: 192.168.15.87
+            port: 53
+          - address: 192.168.15.86
+            port: 53
