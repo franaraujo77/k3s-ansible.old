@@ -86,6 +86,10 @@ spec:
           value: "America/Sao_Paulo"
         - name: WEBPASSWORD
           value: "secret"
+        - name: VIRTUAL_HOST
+          value: pihole.k3s.karva.io
+        - name: PIHOLE_DOMAIN
+          value: pihole.k3s.karva.io
         volumeMounts:
         - name: pihole-local-etc-volume
           mountPath: "/etc/pihole"
