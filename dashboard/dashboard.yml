@@ -10,7 +10,7 @@ metadata:
   name: heimdall-storage-class
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: rancher.io/local-path
+provisioner: driver.longhorn.io
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
